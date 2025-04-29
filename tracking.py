@@ -3,29 +3,56 @@ import mediapipe as mp
 import pyautogui
 import numpy as np
 import time
+import json
+import os
+import subprocess
+import sys
 
+# Caminho do arquivo de configuração
+CONFIG_PATH = os.path.join("settings", "config.json")
+
+# Função para carregar configurações do JSON
+def load_config():
+    try:
+        if os.path.exists(CONFIG_PATH):
+            with open(CONFIG_PATH, 'r') as f:
+                data = json.load(f)
+                return float(data.get("sensitivity", 6.0)), float(data.get("fixation_time", 1.2))
+    except json.JSONDecodeError:
+        print("⚠️ AVISO: config.json está vazio ou inválido. Usando valores padrão.")
+    return 6.0, 1.2
+
+# Inicialização
 cam = cv2.VideoCapture(0)
 face_mesh = mp.solutions.face_mesh.FaceMesh(refine_landmarks=True)
 screen_w, screen_h = pyautogui.size()
 
-# Configurações do cursor e fixação
-sensitivity = 6.0
+# Carrega configurações do usuário
+sensitivity, FIXATION_TIME = load_config()
+
 history_length = 10
 x_history = []
 y_history = []
 
 # Fixação
-FIXATION_TIME = 1.2
 FIXATION_DELAY = 0.3
 FIXATION_TOLERANCE = 10
 fixation_start_time = None
 fixation_ready = False
 last_cursor_position = None
-click_enabled = False  # estado inicial: clique desativado
+click_enabled = False
 
 # Boca aberta
 MOUTH_OPEN_THRESHOLD = 0.06
-mouth_open = False  # controle de transição
+mouth_open = False
+
+# Gatilho de menu de configuração
+menu_fixation_start = None
+menu_progress_proc = None
+MENU_FIXATION_DURATION = 3.0
+menu_triggered = False
+menu_open = False
+menu_proc = None
 
 pyautogui.moveTo(screen_w / 2, screen_h / 2)
 
@@ -40,7 +67,19 @@ def is_mouth_open(landmarks):
     bottom_lip = landmarks[14]
     return abs(top_lip.y - bottom_lip.y) > MOUTH_OPEN_THRESHOLD
 
+def open_settings_menu():
+    global menu_open, menu_proc
+    menu_proc = subprocess.Popen([sys.executable, "settings_window.py"])
+    menu_open = True
+
+def show_progress_indicator():
+    return subprocess.Popen([sys.executable, "menu_indicator.py"])
+
 while True:
+    # Atualiza estado do menu
+    if menu_open and menu_proc and menu_proc.poll() is not None:
+        menu_open = False
+
     _, frame = cam.read()
     frame = cv2.flip(frame, 1)
     rgb_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
@@ -60,7 +99,7 @@ while True:
         # Detectar abertura da boca para alternar modo
         if is_mouth_open(landmarks):
             if not mouth_open:
-                click_enabled = not click_enabled  # alterna o estado
+                click_enabled = not click_enabled
                 mouth_open = True
         else:
             mouth_open = False
@@ -85,13 +124,35 @@ while True:
                 cv2.circle(frame, (ret_x, ret_y), 10, (255, 255, 255), 2)
                 cv2.circle(frame, (ret_x, ret_y), 6, (255, 0, 0), -1)
 
+                current_pos = (screen_x, screen_y)
+
+                # Abertura do menu (canto superior direito)
+                in_corner = screen_x > screen_w * 0.9 and screen_y < screen_h * 0.1
+
+                if click_enabled and in_corner and not menu_open:
+                    if not menu_fixation_start and not menu_triggered:
+                        menu_fixation_start = time.time()
+                        menu_progress_proc = show_progress_indicator()
+                    elif not menu_triggered and time.time() - menu_fixation_start >= MENU_FIXATION_DURATION:
+                        menu_triggered = True
+                        if menu_progress_proc:
+                            menu_progress_proc.kill()
+                        open_settings_menu()
+                        menu_fixation_start = None
+                        menu_progress_proc = None
+                else:
+                    if menu_fixation_start or menu_triggered:
+                        menu_fixation_start = None
+                        if menu_progress_proc:
+                            menu_progress_proc.kill()
+                            menu_progress_proc = None
+                        if not in_corner:
+                            menu_triggered = False
+
                 # FIXAÇÃO (só se clique estiver ativado)
                 if click_enabled:
-                    current_pos = (screen_x, screen_y)
-
                     if last_cursor_position:
                         dist = np.linalg.norm(np.array(current_pos) - np.array(last_cursor_position))
-
                         if dist < FIXATION_TOLERANCE:
                             if fixation_start_time is None:
                                 fixation_start_time = time.time()
