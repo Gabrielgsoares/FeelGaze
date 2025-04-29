@@ -1,5 +1,5 @@
-
-tkinter
-opencv-python
-numpy
-pillow
+opencv-python==4.5.5.62
+numpy==1.24.0
+mediapipe
+pyautogui
+PyQt5
