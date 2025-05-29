@@ -1,0 +1,44 @@
+# Ignore ambiente virtual Python
+.venv/
+venv/
+ENV/
+env/
+
+# Ignore arquivos gerados pelo Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.so
+
+# Arquivos de cache ou log
+*.log
+*.sqlite3
+*.db
+
+# Ignore arquivos de configuração locais
+*.env
+*.local
+config.json
+
+# Ignore pastas do sistema operacional
+.DS_Store
+Thumbs.db
+
+# Ignore configurações do VSCode ou IDEs
+.vscode/
+.idea/
+
+# Ignore arquivos temporários
+*.bak
+*.swp
+*.tmp
+
+# Ignore pastas do Electron/Node.js
+node_modules/
+dist/
+build/
+
+# Ignore Electron binários grandes
+**/Electron.app/
+**/electron.exe

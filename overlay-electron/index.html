@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8" />
+  <style>
+    body {
+      margin: 0;
+      background: transparent;
+      overflow: hidden;
+    }
+    #status {
+      position: absolute;
+      top: 5px;
+      left: 10px;
+      font-family: Arial, sans-serif;
+      font-size: 14px;
+      color: black;
+      background-color: rgba(255, 255, 255, 0.7);
+      padding: 5px 10px;
+      border-radius: 5px;
+    }
+  </style>
+</head>
+<body>
+  <div id="status">Carregando...</div>
+  <script>
+    const fs = require('fs');
+    const path = require('path');
+
+    const statusEl = document.getElementById('status');
+    const filePath = path.join(__dirname, '..', 'settings', 'click_state.json');
+
+    function updateStatus() {
+      fs.readFile(filePath, 'utf8', (err, data) => {
+        if (err) return;
+        try {
+          const obj = JSON.parse(data);
+          statusEl.innerText = obj.click_enabled ? 'Clique ATIVADO' : 'Clique DESATIVADO';
+        } catch {}
+      });
+    }
+
+    updateStatus();
+    setInterval(updateStatus, 300);
+  </script>
+</body>
+</html>

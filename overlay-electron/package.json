@@ -1,0 +1,12 @@
+{
+  "name": "feelgaze-overlay",
+  "version": "1.0.0",
+  "description": "Overlay do estado do clique para o projeto FeelGaze.",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron ."
+  },
+  "devDependencies": {
+    "electron": "^36.2.1"
+  }
+}
